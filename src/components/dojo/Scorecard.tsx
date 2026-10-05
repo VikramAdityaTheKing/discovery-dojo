@@ -28,10 +28,10 @@ export function Scorecard({ card }: { card: ScorecardData }) {
   const talkHealthy = talkPct >= 25 && talkPct <= 50
 
   return (
-    <section data-testid="scorecard" className="rounded-xl border border-border bg-card p-6">
+    <section data-testid="scorecard" className="glass rounded-2xl p-6">
       <div className="flex flex-wrap items-start gap-6">
         <div className="text-center">
-          <div className="text-5xl font-bold tabular-nums text-primary">{card.total}</div>
+          <div className="display text-6xl tabular-nums text-primary">{card.total}</div>
           <div className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">out of 100</div>
         </div>
         <div className="min-w-[240px] flex-1">

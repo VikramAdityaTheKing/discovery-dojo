@@ -17,6 +17,7 @@
 import { Suspense } from 'react'
 import { Outlet, useRouteError } from 'react-router-dom'
 import { ErrorScreen } from '../components/ErrorScreen'
+import { Starfield } from '../components/Starfield'
 import { ToastProvider, TooltipProvider } from '@/components/ui'
 
 export default function App() {
@@ -29,7 +30,8 @@ export default function App() {
         {/* data-testid="app-root" is the canonical "app shell mounted" hook,
             present on every page (static and dynamic). Don't rename without
             updating templates/tests. */}
-        <div data-testid="app-root" className="min-h-screen bg-background text-foreground">
+        <div data-testid="app-root" className="relative isolate min-h-screen text-foreground">
+          <Starfield />
           <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>}>
             <Outlet />
           </Suspense>

@@ -59,9 +59,10 @@ export default function LeaderboardPage() {
     <div className="mx-auto max-w-4xl px-6 py-12">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <Trophy className="h-7 w-7 text-primary" /> Leaderboard
-          </h1>
+          <span className="chip mb-4">
+            <Trophy className="h-3 w-3" /> Live rankings
+          </span>
+          <h1 className="display text-5xl text-foreground">Leaderboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">MEDDIC scores from every graded discovery call. Updates live.</p>
         </div>
         <div className="flex rounded-lg border border-border p-0.5 text-sm">
@@ -85,7 +86,7 @@ export default function LeaderboardPage() {
       ) : records.length === 0 ? (
         <p className="text-sm text-muted-foreground">No graded calls yet. Finish a call to claim the top spot.</p>
       ) : view === 'reps' ? (
-        <table data-testid="leaderboard" className="w-full overflow-hidden rounded-xl border border-border bg-card text-sm">
+        <table data-testid="leaderboard" className="glass w-full overflow-hidden rounded-2xl text-sm">
           <thead className="text-left text-xs uppercase tracking-wider text-muted-foreground">
             <tr className="border-b border-border">
               <th className="px-4 py-3">#</th>
@@ -113,7 +114,7 @@ export default function LeaderboardPage() {
           </tbody>
         </table>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+        <ul className="glass divide-y divide-border overflow-hidden rounded-2xl">
           {records.map((r, i) => (
             <li key={r.recordId}>
               <Link to={`/call/${r.recordId}`} className="flex items-center gap-4 px-4 py-3 hover:bg-accent/40">

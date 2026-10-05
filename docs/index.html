@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Discovery Dojo | Multiplayer AI sales room on DeepSpace</title>
+<meta name="description" content="A multiplayer AI sales room built on DeepSpace: AI researches the prospect, plays the buyer and coaches every reply while a manager sits in live." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #05060d; --fg: #ecebf7; --muted: #9d9fbd; --accent: #8f8ffb;
+    --border: rgba(143,143,251,0.14); --card: rgba(255,255,255,0.03);
+    --good: #34d399; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; background: var(--bg); }
+  body { margin: 0; color: var(--fg); font: 15px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  canvas#stars { position: fixed; inset: 0; z-index: -2; }
+  .glow { position: fixed; inset: 0 0 auto 0; height: 60vh; z-index: -1; pointer-events: none;
+    background: radial-gradient(60% 50% at 50% 0%, rgba(120,110,255,0.16), transparent 70%); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  header { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(12px); background: rgba(5,6,13,0.5); border-bottom: 1px solid var(--border); }
+  header .wrap { display: flex; align-items: center; gap: 22px; height: 56px; font-size: 14px; }
+  header nav { display: flex; gap: 18px; color: var(--muted); }
+  header nav a { text-decoration: none; } header nav a:hover { color: var(--fg); }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 500; text-decoration: none; }
+  .spacer { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 22px; font-size: 14px; font-weight: 500; text-decoration: none; }
+  .btn-primary { background: var(--fg); color: var(--bg); box-shadow: 0 0 0 1px rgba(143,143,251,.35), 0 8px 30px -8px rgba(143,143,251,.6); }
+  .btn-ghost { color: var(--muted); } .btn-ghost:hover { color: var(--fg); }
+  .sm { padding: 6px 16px; font-size: 12px; }
+  .display { font-weight: 300; letter-spacing: -0.035em; line-height: 1.04; margin: 0; }
+  .accent { color: var(--accent); }
+  .chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: 999px; padding: 3px 12px;
+    font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); background: rgba(143,143,251,.05); }
+  .mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .muted { color: var(--muted); font-weight: 300; }
+  .hero { min-height: 92vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .hero h1 { font-size: clamp(52px, 10vw, 104px); margin-top: 22px; }
+  .hero p { max-width: 620px; font-size: 18px; margin: 22px auto 30px; }
+  .sparkle { filter: drop-shadow(0 0 16px rgba(160,160,255,.8)); }
+  section { padding: 96px 0; }
+  section.wrap { padding: 96px 24px; }
+  h2.display { font-size: clamp(36px, 5.5vw, 60px); }
+  .center { text-align: center; }
+  .grid { display: grid; gap: 16px; }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card { background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)); border: 1px solid var(--border); border-radius: 18px; padding: 24px; }
+  .card h3 { margin: 10px 0 6px; font-size: 17px; font-weight: 500; }
+  .card p { margin: 0; color: var(--muted); font-weight: 300; font-size: 14px; }
+  .label { font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+  .ticker { overflow: hidden; border-block: 1px solid var(--border); padding: 12px 0; background: rgba(5,6,13,.6); }
+  .ticker div { display: flex; width: max-content; animation: marquee 40s linear infinite; font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: .2em; color: var(--muted); white-space: pre; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+  .term { max-width: 600px; margin: 40px auto 0; border-radius: 14px; overflow: hidden; }
+  .term .bar { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .term .bar i { width: 10px; height: 10px; border-radius: 50%; background: rgba(157,159,189,.4); }
+  .term pre { margin: 0; padding: 18px 20px; font: 13px/1.9 'Geist Mono', monospace; color: var(--muted); white-space: pre-wrap; }
+  .term .ok { color: var(--good); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-weight: 500; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  td code, p code, li code { font-family: 'Geist Mono', monospace; font-size: 12.5px; color: var(--accent); }
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s ease, transform .8s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  .word { display: inline-flex; height: 1.1em; overflow: hidden; vertical-align: bottom; }
+  .word span { display: flex; flex-direction: column; animation: words 10s cubic-bezier(.7,0,.3,1) infinite; }
+  .word span span { height: 1.1em; line-height: 1.1em; }
+  @keyframes words { 0%,20%{transform:none} 25%,45%{transform:translateY(-1.1em)} 50%,70%{transform:translateY(-2.2em)} 75%,95%{transform:translateY(-3.3em)} 100%{transform:translateY(-4.4em)} }
+  footer { border-top: 1px solid var(--border); padding: 28px 0; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+  @media (prefers-reduced-motion: reduce) { .ticker div, .word span { animation: none; } .reveal { opacity: 1; transform: none; } }
+  @media (max-width: 720px) { header nav { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="glow"></div>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="#"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12 6.2-.6 11.4-5.8 12-12z"/></svg> Discovery Dojo</a>
+    <nav><a href="#how">How it works</a><a href="#deepspace">DeepSpace pieces</a><a href="#patterns">Patterns</a><a href="#tradeoffs">Trade-offs</a></nav>
+    <span class="spacer"></span>
+    <a class="btn btn-ghost sm" href="https://github.com/VikramAdityaTheKing/discovery-dojo">GitHub</a>
+    <a class="btn btn-primary sm" href="https://discovery-dojo.app.space">Open the app</a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <svg class="sparkle" width="44" height="44" viewBox="0 0 24 24" fill="#fff"><path d="M12 0c.6 6.2 5.8 11.4 12 12-6.2.6-11.4 5.8-12 12-.6-6.2-5.8-11.4-12-12 6.2-.6 11.4-5.8 12-12z"/></svg>
+    <h1 class="display">Discovery Dojo</h1>
+    <span class="chip" style="margin-top:18px">The multiplayer sales room, built on DeepSpace</span>
+    <p class="muted">Paste a prospect's website. AI researches the company, plays a buyer who pushes back and coaches every reply, while a manager sits in, recommends the next move or steps in to close. Scored on MEDDIC, ranked on a live leaderboard.</p>
+    <div>
+      <a class="btn btn-primary" href="https://discovery-dojo.app.space">Open the live app &rarr;</a>
+      <a class="btn btn-ghost" href="https://github.com/VikramAdityaTheKing/discovery-dojo">Read the code</a>
+    </div>
+  </div>
+
+  <section id="how" class="wrap">
+    <h2 class="display center reveal">AI can coach your <span class="word accent"><span><span>opener.</span><span>discovery.</span><span>objections.</span><span>close.</span><span>opener.</span></span></span></h2>
+    <div class="grid g3 reveal" style="margin-top:48px">
+      <div class="card"><div class="label">01 Research</div><h3>A buyer from a real company</h3><p>Firecrawl reads the site, Exa finds web and news results, and Claude builds a buyer with hidden pains, objections and a MEDDIC ground truth.</p></div>
+      <div class="card"><div class="label">02 Talk</div><h3>Rep-led, streamed live</h3><p>The rep opens with one of three AI openers. Each buyer reply types out on every screen at once, through one shared record.</p></div>
+      <div class="card"><div class="label">03 Coach</div><h3>A coach after every reply</h3><p>Buyer signal, deal temperature, MEDDIC coverage, talk ratio and three next moves. Built from the transcript only, so it cannot leak the answers.</p></div>
+      <div class="card"><div class="label">04 Manage</div><h3>The manager decides</h3><p>Recommend a move and it lights up for the rep. Pin a note on a moment. Or step into the call and speak to the buyer as the rep's boss.</p></div>
+      <div class="card"><div class="label">05 Close</div><h3>Deals you can actually win</h3><p>Earn it and the buyer books the next meeting, agrees a pilot or buys. Share a one-pager and the buyer reads it.</p></div>
+      <div class="card"><div class="label">06 Review</div><h3>Scored, with evidence</h3><p>Six MEDDIC scores with quotes, pains found and missed, turnarounds and the deal outcome. Every scored call lands on the leaderboard.</p></div>
+    </div>
+    <div class="card term reveal">
+      <div class="bar"><i></i><i></i><i></i></div>
+<pre>$ start call gong.io
+&gt; firecrawl: reading gong.io
+&gt; exa: web results and news
+&gt; claude: building a buyer with hidden pains
+&gt; coach: 3 openers ready
+<span class="ok">ok, you are live with the VP of Revenue Operations</span></pre>
+    </div>
+  </section>
+
+  <div class="ticker"><div><span>LIVE COACH /// MANAGER IN THE LOOP /// BUYERS WHO PUSH BACK /// MEDDIC SCORED /// DEALS YOU CAN WIN /// BUILT ON DEEPSPACE /// LIVE COACH /// MANAGER IN THE LOOP /// BUYERS WHO PUSH BACK /// MEDDIC SCORED /// DEALS YOU CAN WIN /// BUILT ON DEEPSPACE /// </span><span>LIVE COACH /// MANAGER IN THE LOOP /// BUYERS WHO PUSH BACK /// MEDDIC SCORED /// DEALS YOU CAN WIN /// BUILT ON DEEPSPACE /// LIVE COACH /// MANAGER IN THE LOOP /// BUYERS WHO PUSH BACK /// MEDDIC SCORED /// DEALS YOU CAN WIN /// BUILT ON DEEPSPACE /// </span></div></div>
+
+  <section id="deepspace" class="wrap">
+    <div class="center reveal"><span class="chip">Built on DeepSpace</span>
+      <h2 class="display" style="margin-top:18px">Sync, presence, AI. <span class="accent">Already there.</span></h2>
+      <p class="muted" style="max-width:640px;margin:18px auto 0">No vendor keys in the code, no socket server, no auth to write. Every primitive below is the platform's; the app is the sales logic.</p></div>
+    <div class="card reveal" style="margin-top:44px;padding:8px 8px">
+      <table>
+        <tr><th>DeepSpace piece</th><th>What it does here</th></tr>
+        <tr><td><code>RecordRoom</code>, <code>useQuery</code>, <code>useMutations</code></td><td>Sessions, transcript, coach insights, notes and leaderboard, live in every browser</td></tr>
+        <tr><td>Collection RBAC</td><td>Hidden personas no member can read; server-write-only transcript and insights; notes editable only by their author</td></tr>
+        <tr><td>Server actions</td><td>Eight actions, each checking the caller's role on the call before doing anything</td></tr>
+        <tr><td><code>usePresenceRoom</code></td><td>Who is in the room and who is typing, never stored</td></tr>
+        <tr><td>AI proxy, <code>createDeepSpaceAI</code></td><td>Claude for persona, buyer, coach and scoring, with an OpenAI and Cerebras fallback chain</td></tr>
+        <tr><td>Integrations proxy</td><td><code>firecrawl/scrape</code>, <code>exa/search</code>, <code>exa/news-search</code></td></tr>
+        <tr><td>R2 files, <code>useR2Files</code></td><td>Attachments on the call; the buyer reads text files</td></tr>
+        <tr><td>Auth</td><td>Google sign-in; rep or manager decided per call from the session</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="patterns" class="wrap">
+    <div class="center reveal"><span class="chip">For DeepSpace developers</span>
+      <h2 class="display" style="margin-top:18px">Patterns worth <span class="accent">copying.</span></h2></div>
+    <div class="grid g3 reveal" style="margin-top:44px">
+      <div class="card"><div class="label">Stream through a record</div><p style="margin-top:10px">Create an empty turn, then <code>tools.update</code> it with the growing text every 250 ms. RecordRoom fans it out to every viewer over the socket they already have.</p></div>
+      <div class="card"><div class="label">Secrets in a collection</div><p style="margin-top:10px">A field on a shared row reaches every browser. A collection with <code>read: false</code> for members never does. Reveal it through an action that checks the role.</p></div>
+      <div class="card"><div class="label">Actions are the gate</div><p style="margin-top:10px">Action tools run with record permissions off, so every action reloads the session and checks the caller before acting.</p></div>
+      <div class="card"><div class="label">Facts over presence</div><p style="margin-top:10px">Presence is self-reported and can drop. Roles come from the session row; presence only carries ephemeral state like typing.</p></div>
+      <div class="card"><div class="label">Numbers in code</div><p style="margin-top:10px">The model returns sub-scores; code clamps, totals and computes talk ratio. A <code>tidy()</code> pass cleans every stored model string.</p></div>
+      <div class="card"><div class="label">Degrade, never die</div><p style="margin-top:10px">Every research source is optional, and every model call walks a fallback chain on 402, 429 or 5xx.</p></div>
+    </div>
+  </section>
+
+  <section id="tradeoffs" class="wrap">
+    <div class="center reveal"><h2 class="display">Trade-offs, <span class="accent">honestly.</span></h2></div>
+    <div class="grid g3 reveal" style="margin-top:44px">
+      <div class="card"><div class="label">Main trade-off</div><h3>Records over HTTP streams</h3><p>About four writes a second during a reply, in exchange for one channel that reaches the rep and every manager with no extra plumbing.</p></div>
+      <div class="card"><div class="label">Left out</div><h3>Voice and video, for now</h3><p>Every coach and scoring feature works on the transcript. <code>useVoiceAgent</code> and LiveKit rooms are the next step, writing into the same records.</p></div>
+      <div class="card"><div class="label">Known limits</div><h3>Said out loud</h3><p>Research runs in one request (a background job is the fix), one room per app, any member can join a call as manager, PDFs are not read by the buyer.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap center">
+    <span class="chip">From practice room to sales engine</span>
+    <h2 class="display reveal" style="margin-top:18px">Practice the call. <span class="accent">Then win the real one.</span></h2>
+    <p class="muted reveal" style="max-width:620px;margin:18px auto 32px">Today an AI buyer. Next, the same coach and manager seat beside a real conversation. Then voice, video and outcomes written to your CRM.</p>
+    <a class="btn btn-primary" href="https://discovery-dojo.app.space">Open the live app &rarr;</a>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <span style="color:var(--fg)">Discovery Dojo</span>
+  <span>Built on DeepSpace by Aditya Vikram Reddy Vennapusala</span>
+  <span class="spacer"></span>
+  <a href="https://github.com/VikramAdityaTheKing/discovery-dojo">GitHub</a>
+  <a href="https://docs.deep.space">DeepSpace docs</a>
+</div></footer>
+
+<script>
+  // Starfield: slow drift and twinkle; still for reduced motion.
+  (function () {
+    var c = document.getElementById('stars'), x = c.getContext('2d');
+    var still = matchMedia('(prefers-reduced-motion: reduce)').matches, stars = [], w, h;
+    function size() {
+      var d = Math.min(devicePixelRatio || 1, 2); w = innerWidth; h = innerHeight;
+      c.width = w * d; c.height = h * d; c.style.width = w + 'px'; c.style.height = h + 'px'; x.setTransform(d, 0, 0, d, 0, 0);
+      stars = []; for (var i = 0; i < (w * h) / 5200; i++) stars.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() < .08 ? 1.3 : Math.random() * .9 + .2, s: Math.random() * .08 + .02, p: Math.random() * 6.3 });
+    }
+    function draw(t) {
+      x.clearRect(0, 0, w, h);
+      for (var i = 0; i < stars.length; i++) { var s = stars[i];
+        if (!still) { s.y -= s.s; if (s.y < -2) { s.y = h + 2; s.x = Math.random() * w; } }
+        x.globalAlpha = (still ? .7 : .45 + .55 * Math.abs(Math.sin(t / 1400 + s.p))) * (s.r > 1 ? .95 : .7);
+        x.fillStyle = s.r > 1 ? '#c9c9ff' : '#fff'; x.beginPath(); x.arc(s.x, s.y, s.r, 0, 6.3); x.fill(); }
+      if (!still) requestAnimationFrame(draw);
+    }
+    size(); requestAnimationFrame(draw); addEventListener('resize', size);
+    // Reveal on scroll
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: .12 });
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+  })();
+</script>
+</body>
+</html>

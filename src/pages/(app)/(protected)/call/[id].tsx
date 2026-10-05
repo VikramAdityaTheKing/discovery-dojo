@@ -204,7 +204,7 @@ export default function CallRoom() {
         </Link>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="truncate text-lg font-semibold">{s!.company}</h1>
+            <h1 className="display truncate text-2xl text-foreground">{s!.company}</h1>
             <StatusBadge status={s!.status} />
           </div>
           <p className="truncate text-xs text-muted-foreground">
@@ -270,7 +270,7 @@ export default function CallRoom() {
             </div>
           )}
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl border border-border bg-background/40 p-4">
+          <div className="glass min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl p-4">
             {preparing && <PreparingPanel company={s!.company} status={s!.status} />}
             {s!.status === 'error' && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm">
@@ -366,7 +366,7 @@ export default function CallRoom() {
               onUse={applySuggestion}
             />
           )}
-          <section className="rounded-xl border border-border bg-card p-4">
+          <section className="glass rounded-2xl p-4">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Pre-call brief
             </h2>

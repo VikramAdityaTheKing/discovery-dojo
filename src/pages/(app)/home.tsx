@@ -10,6 +10,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AuthGate, AuthOverlay, useAuthProfileReady, useQuery } from 'deepspace'
 import { ArrowRight, Radio } from 'lucide-react'
+import { Sparkle } from '../../components/Starfield'
 import { Button, Input, useToast } from '@/components/ui'
 import { OutcomeBadge } from '../../components/dojo/OutcomeBadge'
 import { StatusBadge } from '../../components/dojo/StatusBadge'
@@ -82,9 +83,11 @@ function Dojo() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
       <section className="mb-12">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Discovery Dojo</p>
-        <h1 className="mb-3 text-3xl font-bold tracking-tight sm:text-4xl">Who are you calling today?</h1>
-        <p className="mb-6 max-w-2xl text-muted-foreground">
+        <span className="chip mb-5">
+          <Sparkle className="h-2.5 w-2.5" /> Discovery Dojo
+        </span>
+        <h1 className="display mb-4 text-5xl text-foreground sm:text-6xl">Who are you calling today?</h1>
+        <p className="mb-8 max-w-2xl font-light text-muted-foreground">
           Paste a prospect's website. We research the company, build a buyer with real pains and objections,
           and put you on a live call with an AI coach reading every reply. Invite your manager to recommend the
           next move or step in to close.
@@ -95,10 +98,10 @@ function Dojo() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="acme.com"
-            className="h-11 flex-1"
+            className="h-12 flex-1 rounded-full bg-background/60 px-5"
             disabled={starting}
           />
-          <Button type="submit" size="lg" loading={starting} disabled={!url.trim()}>
+          <Button type="submit" size="lg" className="btn-glow h-12 rounded-full" loading={starting} disabled={!url.trim()}>
             Start call <ArrowRight />
           </Button>
         </form>
@@ -110,7 +113,7 @@ function Dojo() {
               type="button"
               disabled={starting}
               onClick={() => void start(site)}
-              className="rounded-full border border-border px-2.5 py-1 hover:border-primary hover:text-foreground"
+              className="rounded-full border border-border bg-background/40 px-2.5 py-1 transition-colors hover:border-primary hover:text-foreground"
             >
               {site}
             </button>
@@ -151,7 +154,7 @@ function SessionList({
   userId: string | null
 }) {
   return (
-    <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+    <ul className="glass divide-y divide-border overflow-hidden rounded-2xl">
       {sessions.map((s) => (
         <li key={s.recordId}>
           <Link to={`/call/${s.recordId}`} className="flex items-center gap-4 px-4 py-3 hover:bg-accent/40">
@@ -184,10 +187,10 @@ function SignedOut() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-6">
       <div className="max-w-md text-center">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">Discovery Dojo</p>
-        <h1 className="mb-3 text-3xl font-bold tracking-tight">Practice the call. Then win the real one.</h1>
+        <Sparkle className="mx-auto mb-6 h-8 w-8 text-foreground" />
+        <h1 className="display mb-4 text-5xl text-foreground">Practice the call. Then win the real one.</h1>
         <p className="mb-6 text-muted-foreground">Sign in to start a call, or join one as a manager.</p>
-        <Button size="lg" onClick={() => setOpen(true)}>
+        <Button size="lg" className="btn-glow rounded-full" onClick={() => setOpen(true)}>
           Sign in
         </Button>
       </div>

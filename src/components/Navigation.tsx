@@ -13,6 +13,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { AuthOverlay, useAuthProfileReady, signOut } from 'deepspace'
 import { ChevronDown, LogOut, Menu, X } from 'lucide-react'
 import { APP_NAME } from '../constants'
+import { Sparkle } from './Starfield'
 import type { Role } from '../constants'
 import { nav } from '../nav'
 import { cn } from '../lib/utils'
@@ -69,9 +70,10 @@ export default function Navigation() {
 
   return (
     <>
-      <nav data-testid="app-navigation" className="border-b border-border bg-background">
-        <div className="mx-auto flex h-12 max-w-7xl items-center gap-4 px-4">
-          <Link to="/home" className="text-sm font-semibold text-foreground">
+      <nav data-testid="app-navigation" className="border-b border-border/60 bg-background/50 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4">
+          <Link to="/" className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Sparkle className="h-3.5 w-3.5" />
             {APP_NAME}
           </Link>
 
@@ -136,7 +138,7 @@ export default function Navigation() {
             <button
               data-testid="nav-sign-in-button"
               onClick={() => setShowAuthModal(true)}
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+              className="btn-glow rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background hover:opacity-90"
             >
               Sign in
             </button>

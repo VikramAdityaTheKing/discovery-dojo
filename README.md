@@ -6,7 +6,7 @@ Paste a prospect's website. Discovery Dojo researches the company, builds a buye
 
 It is a practice room today. The same coach and manager tools are designed to sit beside real calls next, with voice and video.
 
-**Live app:** https://discovery-dojo.app.space
+**Live app:** https://discovery-dojo.app.space · **Project site:** https://vikramadityatheking.github.io/discovery-dojo/
 
 ## What happens in a call
 

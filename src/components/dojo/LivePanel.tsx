@@ -110,7 +110,7 @@ export function LivePanel({ insights, turns, isRep, live, myName, onUse }: Props
   const signal = SIGNAL_STYLE[data.signal] ?? SIGNAL_STYLE.neutral
 
   return (
-    <section data-testid="live-panel" className="rounded-xl border border-primary/30 bg-card p-4">
+    <section data-testid="live-panel" className="glass rounded-2xl border-primary/30 p-4 shadow-[0_20px_60px_-30px_rgba(143,143,251,0.6)]">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
           <Sparkles className="h-3.5 w-3.5" /> Live coach

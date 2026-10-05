@@ -13,30 +13,31 @@
  * themes = changing the data-theme attribute on <html> in index.html. No
  * JS, no FOUC.
  *
- * Status colors (success, warning, info) are intentionally NOT themed , * they stay consistent across every preset.
+ * Status colors (success, warning, info) are intentionally NOT themed:
+ * they stay consistent across every preset.
  */
 @theme {
   /* shadcn core tokens, slate (default): neutral gray on near-black, indigo accent */
-  --color-background: #0a0a0a;
-  --color-foreground: #e8eaed;
-  --color-card: #161616;
-  --color-card-foreground: #e8eaed;
-  --color-popover: #161616;
-  --color-popover-foreground: #e8eaed;
-  --color-primary: #ff7a45;
-  --color-primary-foreground: #160b05;
-  --color-secondary: #1e1e1e;
-  --color-secondary-foreground: #e8eaed;
-  --color-muted: #1e1e1e;
-  --color-muted-foreground: #9ca3af;
-  --color-accent: #262626;
-  --color-accent-foreground: #e8eaed;
+  --color-background: #05060d;
+  --color-foreground: #ecebf7;
+  --color-card: #0b0c19;
+  --color-card-foreground: #ecebf7;
+  --color-popover: #0d0e1d;
+  --color-popover-foreground: #ecebf7;
+  --color-primary: #8f8ffb;
+  --color-primary-foreground: #0a0a1a;
+  --color-secondary: #14152a;
+  --color-secondary-foreground: #ecebf7;
+  --color-muted: #13142a;
+  --color-muted-foreground: #9d9fbd;
+  --color-accent: #1a1b35;
+  --color-accent-foreground: #ecebf7;
   --color-destructive: #ef4444;
   --color-destructive-foreground: #ffffff;
-  --color-border: rgba(60, 64, 67, 0.6);
-  --color-input: rgba(60, 64, 67, 0.6);
-  --color-ring: #ff7a45;
-  --radius: 0.5rem;
+  --color-border: rgba(143, 143, 251, 0.14);
+  --color-input: rgba(143, 143, 251, 0.18);
+  --color-ring: #8f8ffb;
+  --radius: 0.75rem;
 
   /*
    * Map the rounded-* utilities onto --radius so a theme (or you) can change
@@ -163,7 +164,8 @@
   }
 
   body {
-    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -230,4 +232,166 @@
   a, button, [role="button"], input, select, textarea {
     touch-action: manipulation;
   }
+}
+
+
+/* ==========================================================================
+ * Discovery Dojo look, modelled on deep.space: a starfield on deep navy,
+ * thin display type, small tracked chips, glass cards, lavender accents.
+ * Fonts are the Inter and Geist Mono files the DeepSpace SDK ships (OFL).
+ * ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@layer components {
+  /* Big, thin headlines like the DeepSpace hero */
+  .display {
+    font-weight: 300;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+  .mono {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  /* Small uppercase pill: "THE MULTIPLAYER SALES ROOM" */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    background: rgba(143, 143, 251, 0.05);
+  }
+
+  /* Frosted card with a faint top highlight */
+  .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+    border: 1px solid var(--color-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  /* Pill buttons with a soft glow, like "Launch DeepSpace" */
+  .btn-glow {
+    box-shadow: 0 0 0 1px rgba(143, 143, 251, 0.35), 0 8px 30px -8px rgba(143, 143, 251, 0.55);
+  }
+
+  .accent-text {
+    color: var(--color-primary);
+  }
+
+  /* Endless ticker: "LIVE COACH /// MANAGER IN THE LOOP /// ..." */
+  .marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 40s linear infinite;
+  }
+
+  /* Blinking terminal caret */
+  .caret::after {
+    content: '';
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    margin-left: 2px;
+    vertical-align: -0.15em;
+    background: var(--color-primary);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  /* Lines that type in one after another (set --d per line) */
+  .type-in {
+    opacity: 0;
+    animation: type-in 0.4s ease-out forwards;
+    animation-delay: var(--d, 0s);
+  }
+
+  /* Gentle float for hero mock cards */
+  .float-slow {
+    animation: float 7s ease-in-out infinite;
+  }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+@keyframes type-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Scroll reveal with no JavaScript, so prerendered HTML stays visible
+ * everywhere and browsers that support view timelines animate it in. */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 40%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee, .caret::after, .float-slow, .type-in, .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* "AI can coach your [opener / discovery / objection / close]": four words
+ * stacked in a one-line window and slid up in steps. Pure CSS. */
+.word-cycle {
+  display: inline-flex;
+  height: 1.25em;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+.word-cycle > span {
+  display: flex;
+  flex-direction: column;
+  animation: word-cycle 10s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
+.word-cycle > span > span {
+  height: 1.25em;
+  line-height: 1.25em;
+}
+@keyframes word-cycle {
+  0%, 20% { transform: translateY(0); }
+  25%, 45% { transform: translateY(-1.25em); }
+  50%, 70% { transform: translateY(-2.5em); }
+  75%, 95% { transform: translateY(-3.75em); }
+  100% { transform: translateY(-5em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-cycle > span { animation: none; }
 }
