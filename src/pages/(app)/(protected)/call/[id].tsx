@@ -433,7 +433,7 @@ export default function CallRoom() {
                 {sources.map((src) => (
                   <li key={src.url} className="truncate text-xs">
                     <a href={src.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
-                      {src.title}
+                      {src.title.replace(/\s*[\u2014\u2013]\s*/g, ' | ')}
                     </a>
                   </li>
                 ))}
@@ -501,6 +501,10 @@ function FollowUpModal(props: { open: boolean; onClose: () => void; sessionId: s
   const [attendees, setAttendees] = useState(props.defaultAttendees)
   const [agenda, setAgenda] = useState('')
   const [saving, setSaving] = useState(false)
+  // The modal mounts before the buyer's name has loaded, so prefill on open.
+  useEffect(() => {
+    if (props.open) setAttendees((a) => a || props.defaultAttendees)
+  }, [props.open, props.defaultAttendees])
 
   const save = async () => {
     const date = new Date(when)

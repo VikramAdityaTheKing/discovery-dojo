@@ -19,6 +19,9 @@
 import type { ActionTools } from 'deepspace/worker'
 import type { Source } from '../../dojo/types'
 
+/** Source titles come from other sites. Swap their dashes for a plain separator. */
+const cleanTitle = (t: string) => t.replace(/\s*[\u2014\u2013]\s*/g, ' | ')
+
 export interface ResearchResult {
   company: string
   notes: string // everything we learned, as plain text for the prompt
@@ -162,7 +165,7 @@ export async function researchCompany(tools: ActionTools, url: string): Promise<
 
   const sources: Source[] = [
     { title: `${company} website`, url },
-    ...[...web, ...news].filter((r) => r.url).slice(0, 6).map((r) => ({ title: r.title, url: r.url })),
+    ...[...web, ...news].filter((r) => r.url).slice(0, 6).map((r) => ({ title: cleanTitle(r.title), url: r.url })),
   ]
 
   return { company, notes: sections.join('\n\n'), sources }
