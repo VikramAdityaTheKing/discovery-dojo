@@ -7,7 +7,7 @@
  */
 
 import { getAuthToken } from 'deepspace'
-import type { Attachment, Persona } from '../dojo/types'
+import type { Attachment, FollowUp, Persona } from '../dojo/types'
 
 type Envelope<T> = { success: true; data: T } | { success: false; error: string } | { error?: string }
 
@@ -43,6 +43,12 @@ export const dojoApi = {
   endCall: (sessionId: string) => callAction<{ total: number; outcome: string }>('dojo-end-call', { sessionId }),
   revealPersona: (sessionId: string) =>
     callAction<{ persona: Persona }>('dojo-reveal-persona', { sessionId }),
+  /** A manager accepts the rep's invite. Unlocks the call. */
+  joinManager: (sessionId: string, userName: string) =>
+    callAction<{ joined: boolean }>('dojo-join-manager', { sessionId, userName }),
+  /** Book the next meeting (e.g. with the economic buyer) from inside the call. */
+  bookFollowUp: (sessionId: string, input: { when: string; label: string; attendees: string; agenda: string }, userName: string) =>
+    callAction<{ followUp: FollowUp }>('dojo-book-followup', { sessionId, ...input, userName }),
   deleteSession: (sessionId: string) =>
     callAction<{ deleted: boolean }>('dojo-delete-session', { sessionId }),
 }

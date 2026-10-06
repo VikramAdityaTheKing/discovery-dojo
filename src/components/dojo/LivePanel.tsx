@@ -88,6 +88,7 @@ export function LivePanel({ insights, turns, isRep, live, myName, onUse }: Props
   let seller = 0
   let all = 0
   for (const t of turns) {
+    if (t.data.speaker === 'system') continue
     const n = words(t.data.content)
     all += n
     if (t.data.speaker !== 'buyer') seller += n

@@ -45,6 +45,11 @@ export const sessionsSchema: CollectionSchema = {
     num('totalScore'), // 0-100, denormalized for leaderboard sorting
     // closed-won | next-meeting | stalled | lost, set by scoring
     text('outcome'),
+    // The manager who accepted the rep's invite. The rep cannot open the
+    // call until this is set: a 3-seat room always has a manager on the line.
+    text('managerId'),
+    text('managerName'),
+    text('followUp'), // JSON string: FollowUp, when a next meeting is booked
     text('error'),
   ],
   permissions: {
@@ -75,7 +80,7 @@ export const turnsSchema: CollectionSchema = {
   columns: [
     text('sessionId'),
     num('seq'), // ordering within the call
-    text('speaker'), // 'rep' | 'buyer' | 'manager' (a manager stepping into the call)
+    text('speaker'), // 'rep' | 'buyer' | 'manager' | 'system' (room events like a booked follow-up)
     text('authorName'), // who spoke, for rep and manager turns
     text('attachment'), // JSON string: Attachment, when a file was shared on this turn
     text('content'),

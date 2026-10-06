@@ -4,9 +4,12 @@
  * One page, two roles, decided per session:
  *   - REP      the user who created the session (session.repId). Opens the
  *              call, talks to the buyer, uses the live coach, ends the call.
- *   - MANAGER  anyone else who opens the same link. Sees the hidden buyer
- *              brief, recommends the coach's next moves, pins notes on turns,
- *              and can step into the call and speak to the buyer directly.
+ *   - MANAGER  the person who accepted the rep's invite (session.managerId).
+ *              Sees the hidden buyer brief, recommends the coach's next
+ *              moves, pins notes on turns, and can step into the call.
+ *   - VIEWER   anyone else with the link: watches, read only.
+ *
+ * The 3-seat rule: the rep cannot open the call until a manager accepts.
  *
  * Everything on screen is live shared state:
  *   useQuery('sessions' | 'turns' | 'notes' | 'insights')  RecordRoom
@@ -19,8 +22,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuthProfileReady, usePresenceRoom, useQuery } from 'deepspace'
-import { ArrowLeft, Copy, Eye, Loader2, Megaphone, PhoneOff, Trash2 } from 'lucide-react'
-import { Button, ConfirmModal, useToast } from '@/components/ui'
+import { ArrowLeft, CalendarCheck, CalendarPlus, Copy, Eye, Loader2, Megaphone, PhoneOff, ShieldCheck, Trash2 } from 'lucide-react'
+import { Button, ConfirmModal, Input, Modal, Textarea, useToast } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { Composer, type ComposerHandle } from '../../../../components/dojo/Composer'
 import { LivePanel } from '../../../../components/dojo/LivePanel'
@@ -30,6 +33,7 @@ import { TurnItem } from '../../../../components/dojo/TurnItem'
 import { dojoApi } from '../../../../lib/dojo-api'
 import type {
   Attachment,
+  FollowUp,
   InsightRow,
   NoteRow,
   Persona,
@@ -69,7 +73,8 @@ export default function CallRoom() {
 
   const s = session?.data
   const isRep = !!s && s.repId === userId
-  const role = isRep ? 'rep' : 'manager'
+  const isManager = !!s && !!s.managerId && s.managerId === userId
+  const role = isRep ? 'rep' : isManager ? 'manager' : 'viewer'
 
   // --- Presence (who is here, who is typing) -------------------------------
   const { peers, connected, updateState } = usePresenceRoom(`call:${id}`)
@@ -92,6 +97,8 @@ export default function CallRoom() {
   // Who is the rep is a FACT on the session record, so we read it from there
   // rather than trusting what each browser says about itself over presence.
   const isPeerRep = (userId: string) => userId === session?.data.repId
+  const peerLabel = (uid: string) =>
+    isPeerRep(uid) ? 'rep' : uid === session?.data.managerId ? 'mgr' : 'viewer'
   const repTyping = peers.some((p) => isPeerRep(p.userId) && p.state.typing === true)
 
   // --- Derived ---------------------------------------------------------------
@@ -167,8 +174,23 @@ export default function CallRoom() {
 
   const copyCoachLink = async () => {
     await navigator.clipboard.writeText(window.location.href)
-    toast.info('Link copied', 'Anyone who opens it joins as a manager.')
+    toast.info('Invite link copied', 'Send it to your manager. The call unlocks when they accept.')
   }
+
+  const [joining, setJoining] = useState(false)
+  const acceptInvite = async () => {
+    setJoining(true)
+    try {
+      await dojoApi.joinManager(id, myName)
+      toast.success('You are on the call', 'Recommend moves, pin notes, or step in when it counts.')
+    } catch (e) {
+      toast.error('Could not join', (e as Error).message)
+    } finally {
+      setJoining(false)
+    }
+  }
+
+  const [booking, setBooking] = useState(false)
 
   const deleteSession = async () => {
     setDeleting(true)
@@ -192,8 +214,10 @@ export default function CallRoom() {
   }
 
   const preparing = s!.status === 'queued' || s!.status === 'researching'
-  const canTalk = isRep && (s!.status === 'ready' || s!.status === 'live')
+  const hasManager = !!s!.managerId
+  const canTalk = isRep && hasManager && (s!.status === 'ready' || s!.status === 'live')
   const live = s!.status === 'live'
+  const followUp = parseJson<FollowUp | null>(s!.followUp, null)
 
   return (
     <div className="mx-auto flex h-full max-w-7xl flex-col px-4 py-4">
@@ -209,6 +233,7 @@ export default function CallRoom() {
           </div>
           <p className="truncate text-xs text-muted-foreground">
             {s!.buyerName ? `${s!.buyerName}, ${s!.buyerTitle}` : s!.url} · rep: {s!.repName}
+            {hasManager ? ` · manager: ${s!.managerName}` : ''}
           </p>
         </div>
         <div className="flex-1" />
@@ -221,24 +246,36 @@ export default function CallRoom() {
               isRep ? 'bg-primary/15 text-primary' : 'bg-amber-500/15 text-amber-400',
             )}
           >
-            You: {isRep ? 'Rep' : 'Manager'}
+            You: {isRep ? 'Rep' : isManager ? 'Manager' : 'Viewer'}
           </span>
           {peers.map((p) => (
             <span
               key={p.userId}
-              title={`${p.userName} (${isPeerRep(p.userId) ? 'rep' : 'manager'})`}
+              title={`${p.userName} (${peerLabel(p.userId)})`}
               className="flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               {p.userName.split(' ')[0]}
-              <span className="text-muted-foreground">{isPeerRep(p.userId) ? 'rep' : 'mgr'}</span>
+              <span className="text-muted-foreground">{peerLabel(p.userId)}</span>
             </span>
           ))}
         </div>
 
-        <Button size="sm" variant="outline" onClick={copyCoachLink}>
-          <Copy /> Invite manager
-        </Button>
+        {isRep && !hasManager && s!.status !== 'scored' && s!.status !== 'error' && (
+          <Button size="sm" variant="outline" onClick={copyCoachLink}>
+            <Copy /> Invite manager
+          </Button>
+        )}
+        {followUp && (
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-300">
+            <CalendarCheck className="h-3.5 w-3.5" /> Follow-up {followUp.label}
+          </span>
+        )}
+        {(isRep || isManager) && live && (
+          <Button size="sm" variant="outline" disabled={buyerStreaming} onClick={() => setBooking(true)}>
+            <CalendarPlus /> {followUp ? 'Reschedule' : 'Book follow-up'}
+          </Button>
+        )}
         {isRep && s!.status === 'live' && (
           <Button size="sm" variant="destructive" loading={ending} disabled={buyerStreaming} onClick={endCall}>
             <PhoneOff /> End call & score
@@ -250,6 +287,14 @@ export default function CallRoom() {
           </Button>
         )}
       </header>
+
+      <FollowUpModal
+        open={booking}
+        onClose={() => setBooking(false)}
+        sessionId={id}
+        myName={myName}
+        defaultAttendees={s!.buyerName ? `${s!.buyerName} and their decision maker` : ''}
+      />
 
       <ConfirmModal
         open={confirmDelete}
@@ -280,10 +325,16 @@ export default function CallRoom() {
                 </Link>
               </div>
             )}
-            {s!.status === 'ready' && turns.length === 0 && (
+            {!preparing && !hasManager && s!.status !== 'error' && s!.status !== 'scored' && (
+              <InviteGate isRep={isRep} repName={s!.repName} buyerName={s!.buyerName} company={s!.company}
+                onCopy={copyCoachLink} onAccept={acceptInvite} joining={joining} />
+            )}
+            {s!.status === 'ready' && hasManager && turns.length === 0 && (
               <div className="mx-auto max-w-md py-10 text-center text-sm text-muted-foreground">
                 <p className="mb-1 font-medium text-foreground">
-                  {isRep ? `You are calling ${s!.buyerName}.` : `Waiting for the rep to call ${s!.buyerName}.`}
+                  {isRep
+                    ? `${s!.managerName} is on the line. You are calling ${s!.buyerName}.`
+                    : `Waiting for the rep to call ${s!.buyerName}.`}
                 </p>
                 <p>
                   {isRep
@@ -298,7 +349,7 @@ export default function CallRoom() {
                 turn={t}
                 notes={notesByTurn.get(t.recordId) ?? []}
                 buyerName={s!.buyerName}
-                canCoach={!isRep}
+                canCoach={isManager}
                 myUserId={userId}
                 myName={myName}
               />
@@ -320,7 +371,9 @@ export default function CallRoom() {
               busy={sending}
               disabled={!canTalk || sending || buyerStreaming}
               placeholder={
-                !canTalk
+                !hasManager
+                  ? 'Invite a manager to unlock the call'
+                  : !canTalk
                   ? 'The call is not open for talking right now'
                   : turns.length === 0
                     ? 'Open the call... (Enter to send, Shift+Enter for a new line)'
@@ -329,6 +382,10 @@ export default function CallRoom() {
               onSend={send}
               onTyping={setTyping}
             />
+          ) : !isManager ? (
+            <div className="mt-3 text-center text-xs text-muted-foreground">
+              {hasManager ? `You are watching. ${s!.managerName} is the manager on this call.` : 'Accept the invite above to coach this call.'}
+            </div>
           ) : stepIn && live ? (
             <Composer
               ref={managerComposer}
@@ -388,6 +445,108 @@ export default function CallRoom() {
         </aside>
       </div>
     </div>
+  )
+}
+
+/**
+ * The 3-seat rule. Reps are often most confident right before they lose a
+ * deal, so the call stays locked until a manager accepts the invite.
+ */
+function InviteGate(props: {
+  isRep: boolean
+  repName: string
+  buyerName: string
+  company: string
+  joining: boolean
+  onCopy: () => void
+  onAccept: () => void
+}) {
+  return (
+    <div data-testid="invite-gate" className="mx-auto max-w-md rounded-2xl border border-primary/30 bg-primary/5 p-6 text-center">
+      <ShieldCheck className="mx-auto mb-3 h-7 w-7 text-primary" />
+      {props.isRep ? (
+        <>
+          <h2 className="mb-1 font-semibold">Invite your manager before you dial</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Every Dojo call is a 3-seat room: you, {props.buyerName || 'the buyer'}, and a manager who can coach,
+            recommend moves and step in. The call unlocks as soon as they accept.
+          </p>
+          <Button className="btn-glow" onClick={props.onCopy}>
+            <Copy /> Copy invite link
+          </Button>
+          <p className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Waiting for a manager to accept...
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className="mb-1 font-semibold">{props.repName} invited you to coach a call</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {props.buyerName ? `${props.buyerName} at ${props.company}` : props.company}. As the manager you see the
+            buyer's hidden brief, recommend moves, pin notes and can step into the call.
+          </p>
+          <Button className="btn-glow" loading={props.joining} onClick={props.onAccept}>
+            Accept and join as manager
+          </Button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Book the next meeting without leaving the call. */
+function FollowUpModal(props: { open: boolean; onClose: () => void; sessionId: string; myName: string; defaultAttendees: string }) {
+  const toast = useToast()
+  const [when, setWhen] = useState('')
+  const [attendees, setAttendees] = useState(props.defaultAttendees)
+  const [agenda, setAgenda] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
+    const date = new Date(when)
+    if (Number.isNaN(date.getTime())) return toast.error('Pick a date and time')
+    setSaving(true)
+    try {
+      const label = date.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      await dojoApi.bookFollowUp(props.sessionId, { when: date.toISOString(), label, attendees, agenda }, props.myName)
+      toast.success('Follow-up booked', label)
+      props.onClose()
+    } catch (e) {
+      toast.error('Could not book', (e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal open={props.open} onClose={props.onClose} size="sm">
+      <div className="space-y-4 p-6">
+        <div>
+          <h2 className="font-semibold">Book a follow-up</h2>
+          <p className="text-xs text-muted-foreground">
+            The buyer cannot decide alone? Get the decision maker on the calendar before you hang up.
+          </p>
+        </div>
+        <label className="block space-y-1 text-xs">
+          <span className="text-muted-foreground">When</span>
+          <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
+        </label>
+        <label className="block space-y-1 text-xs">
+          <span className="text-muted-foreground">Who</span>
+          <Input value={attendees} placeholder="e.g. Dana (VP Finance), Marco, our SE" onChange={(e) => setAttendees(e.target.value)} />
+        </label>
+        <label className="block space-y-1 text-xs">
+          <span className="text-muted-foreground">Agenda</span>
+          <Textarea rows={2} value={agenda} placeholder="e.g. ROI review and pilot terms with the CFO" onChange={(e) => setAgenda(e.target.value)} />
+        </label>
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={props.onClose}>Cancel</Button>
+          <Button loading={saving} disabled={!when || !attendees.trim()} onClick={() => void save()}>
+            <CalendarPlus /> Send invite
+          </Button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

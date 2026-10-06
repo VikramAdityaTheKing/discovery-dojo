@@ -15,6 +15,8 @@
  *   dojo-end-call         MEDDIC scoring + deal outcome -> leaderboard
  *   dojo-reveal-persona   hidden brief, for managers (or the rep after scoring)
  *   dojo-delete-session   rep deletes their session and everything under it
+ *   dojo-join-manager     a manager accepts the rep's invite (unlocks the call)
+ *   dojo-book-followup    rep or manager books the next meeting from the call
  */
 
 import type { ModelMessage } from 'ai'
@@ -23,6 +25,7 @@ import type { Env } from '../../worker'
 import type {
   Attachment,
   DealOutcome,
+  FollowUp,
   InsightRow,
   MeddicCoverage,
   MeddicItem,
@@ -185,6 +188,9 @@ const createSession: Action = async ({ userId, params, tools, env }) => {
     score: '',
     totalScore: 0,
     outcome: '',
+    managerId: '',
+    managerName: '',
+    followUp: '',
     error: '',
   }
   const created = await tools.create('sessions', row as unknown as Record<string, unknown>)
@@ -285,6 +291,7 @@ const prepareSession: Action = async ({ userId, params, tools, env }) => {
 function toMessages(turns: TurnRow[]): ModelMessage[] {
   const raw: ModelMessage[] = turns.map((t): ModelMessage => {
     if (t.speaker === 'buyer') return { role: 'assistant', content: t.content }
+    if (t.speaker === 'system') return { role: 'user', content: `[${t.content}]` }
     const file = t.attachment ? `\n${attachmentText(t.attachment)}` : ''
     const said =
       t.speaker === 'manager'
@@ -315,6 +322,9 @@ const sendTurn: Action = async ({ userId, params, tools, env }) => {
   const session = await loadSession(tools, sessionId)
   if (!session) return fail('Session not found')
   const isRep = session.repId === userId
+  // The 3-seat rule: no manager on the line, no call.
+  if (!session.managerId) return fail('Invite a manager first. The call unlocks once they accept.')
+  if (!isRep && session.managerId !== userId) return fail('Only the manager on this call can speak.')
   if (isRep && session.status !== 'ready' && session.status !== 'live') return fail(`The call is ${session.status}.`)
   // A manager can step in only once the rep has opened the call.
   if (!isRep && session.status !== 'live') return fail('A manager can step in once the rep has opened the call.')
@@ -357,7 +367,7 @@ const sendTurn: Action = async ({ userId, params, tools, env }) => {
     const result = await streamWithFallback(
       env,
       BUYER_MODELS,
-      { system: buyerSystemPrompt(persona), messages, maxOutputTokens: 400 },
+      { system: buyerSystemPrompt(persona, session.managerName), messages, maxOutputTokens: 400 },
       async (soFar) => {
         // Throttle: one shared-record write per STREAM_FLUSH_MS, not per token.
         const now = Date.now()
@@ -461,6 +471,7 @@ const pickSuggestion: Action = async ({ userId, params, tools }) => {
   const session = await loadSession(tools, res.data.record.data.sessionId)
   if (!session) return fail('Session not found')
   if (session.repId === userId) return fail('The manager recommends; the rep chooses.')
+  if (session.managerId !== userId) return fail('Only the manager on this call can recommend.')
   const count = parseJson<Suggestion[]>(res.data.record.data.suggestions, []).length
   const picked = Number.isInteger(index) && index >= -1 && index < count ? index : -1
   await tools.update('insights', insightId, { picked, pickedBy: displayName(params, 'Manager') })
@@ -478,6 +489,7 @@ function talkRatio(turns: TurnRow[]): number {
   let seller = 0
   let all = 0
   for (const t of turns) {
+    if (t.speaker === 'system') continue
     const n = words(t.content)
     all += n
     if (t.speaker !== 'buyer') seller += n
@@ -515,7 +527,7 @@ const endCall: Action = async ({ userId, params, tools, env }) => {
   await tools.update('sessions', sessionId, { status: 'scoring', error: '' })
 
   try {
-    const { text, modelId } = await generateWithFallback(env, ANALYST_MODELS, scoringPrompt(persona, turns, notes))
+    const { text, modelId } = await generateWithFallback(env, ANALYST_MODELS, scoringPrompt(persona, turns, notes, parseJson<FollowUp | null>(session.followUp, null)))
     console.info(`[dojo] call ${sessionId} scored by ${modelId}`)
     const raw = extractJson<Omit<Scorecard, 'total' | 'talkRatio'>>(tidy(text))
     const meddic: MeddicItem[] = (raw.meddic ?? []).map((m) => ({
@@ -573,6 +585,7 @@ const revealPersona: Action = async ({ userId, params, tools }) => {
   if (isRep && session.status !== 'scored') {
     return fail('No peeking. The buyer brief unlocks after your call is scored.')
   }
+  if (!isRep && session.managerId !== userId) return fail('Only the manager on this call can see the brief.')
   const persona = await loadPersona(tools, sessionId)
   if (!persona) return fail('Persona not ready yet')
   return { success: true, data: { persona } }
@@ -599,7 +612,67 @@ const deleteSession: Action = async ({ userId, params, tools }) => {
   return { success: true, data: { deleted: true } }
 }
 
+// ---------------------------------------------------------------------------
+// 9. Join as manager: the rep invites, a manager accepts. One manager per
+//    room, and the rep can never be their own manager.
+// ---------------------------------------------------------------------------
+
+const joinManager: Action = async ({ userId, params, tools }) => {
+  const sessionId = String(params.sessionId ?? '')
+  const session = await loadSession(tools, sessionId)
+  if (!session) return fail('Session not found')
+  if (session.repId === userId) return fail('You are the rep on this call. Send the link to your manager.')
+  if (session.managerId === userId) return { success: true, data: { joined: true } }
+  if (session.managerId) return fail(`${session.managerName || 'Another manager'} is already on this call.`)
+  if (session.status === 'scored' || session.status === 'error') return fail(`The call is ${session.status}.`)
+  const managerName = displayName(params, 'Manager')
+  await tools.update('sessions', sessionId, { managerId: userId, managerName })
+  return { success: true, data: { joined: true } }
+}
+
+// ---------------------------------------------------------------------------
+// 10. Book follow-up: when the buyer cannot decide alone ("I need to run this
+//     by my CFO"), the seller side books the next meeting from inside the
+//     call. It is written to the session AND as a 'system' line in the
+//     transcript, so the buyer, the live coach and the scorer all see it.
+// ---------------------------------------------------------------------------
+
+const bookFollowUp: Action = async ({ userId, params, tools }) => {
+  const sessionId = String(params.sessionId ?? '')
+  const session = await loadSession(tools, sessionId)
+  if (!session) return fail('Session not found')
+  if (userId !== session.repId && userId !== session.managerId) return fail('Only the rep or the manager can book.')
+  if (session.status !== 'live') return fail('Book the follow-up while the call is live.')
+  const when = new Date(String(params.when ?? ''))
+  if (Number.isNaN(when.getTime())) return fail('Pick a date and time.')
+  if (when.getTime() < Date.now()) return fail('Pick a time in the future.')
+  const followUp: FollowUp = {
+    when: when.toISOString(),
+    label: tidy(String(params.label ?? when.toUTCString())).slice(0, 80),
+    attendees: tidy(String(params.attendees ?? '')).trim().slice(0, 200),
+    agenda: tidy(String(params.agenda ?? '')).trim().slice(0, 200),
+    bookedBy: displayName(params, 'Seller'),
+  }
+  if (!followUp.attendees) return fail('Who should be in the follow-up?')
+
+  const history = await loadTurns(tools, sessionId)
+  if (history.some((t) => t.data.streaming === 'true')) return fail('Wait for the buyer to finish talking.')
+  await tools.update('sessions', sessionId, { followUp: JSON.stringify(followUp) })
+  await tools.create('turns', {
+    sessionId,
+    seq: (history.at(-1)?.data.seq ?? 0) + 1,
+    speaker: 'system',
+    authorName: followUp.bookedBy,
+    content: `Calendar invite sent by ${followUp.bookedBy}: ${followUp.agenda || 'Follow-up call'}, ${followUp.label}, with ${followUp.attendees}`,
+    streaming: 'false',
+    attachment: '',
+  } satisfies TurnRow as unknown as Record<string, unknown>)
+  return { success: true, data: { followUp } }
+}
+
 export const dojoActions: Record<string, Action> = {
+  'dojo-join-manager': joinManager,
+  'dojo-book-followup': bookFollowUp,
   'dojo-create-session': createSession,
   'dojo-prepare-session': prepareSession,
   'dojo-send-turn': sendTurn,

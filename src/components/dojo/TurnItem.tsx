@@ -9,7 +9,7 @@
  */
 
 import { useState } from 'react'
-import { MessageSquarePlus, Paperclip, Trash2 } from 'lucide-react'
+import { CalendarCheck, MessageSquarePlus, Paperclip, Trash2 } from 'lucide-react'
 import type { RecordData } from 'deepspace'
 import { useMutations } from 'deepspace'
 import { Button, Textarea } from '@/components/ui'
@@ -36,6 +36,17 @@ export function TurnItem({ turn, notes, buyerName, canCoach, myUserId, myName }:
   const [composing, setComposing] = useState(false)
   const [draft, setDraft] = useState('')
   const { create, remove, ready } = useMutations<NoteRow>('notes')
+
+  // Room events (a booked follow-up) render as a centred line, not a bubble.
+  if (data.speaker === 'system') {
+    return (
+      <div data-testid="turn-event" className="flex justify-center">
+        <span className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+          <CalendarCheck className="h-3.5 w-3.5" /> {data.content}
+        </span>
+      </div>
+    )
+  }
 
   const saveNote = async () => {
     const content = draft.trim()

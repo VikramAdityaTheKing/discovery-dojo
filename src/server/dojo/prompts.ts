@@ -10,7 +10,7 @@
  *   scoringPrompt      end of call: MEDDIC scorecard + deal outcome
  */
 
-import type { MeddicCoverage, NoteRow, Persona, TurnRow } from '../../dojo/types'
+import type { FollowUp, MeddicCoverage, NoteRow, Persona, TurnRow } from '../../dojo/types'
 import { parseJson } from '../../dojo/types'
 import type { Attachment } from '../../dojo/types'
 
@@ -34,6 +34,7 @@ export function attachmentText(raw: string): string {
 export function transcriptText(turns: TurnRow[]): string {
   return turns
     .map((t) => {
+      if (t.speaker === 'system') return `EVENT: ${t.content}`
       const who =
         t.speaker === 'rep' ? 'REP' : t.speaker === 'manager' ? `SALES MANAGER (${t.authorName || 'manager'})` : 'BUYER'
       const file = t.attachment ? `\n${attachmentText(t.attachment)}` : ''
@@ -96,9 +97,10 @@ ${research}`
 // 2. Buyer: the system prompt for every live turn
 // ---------------------------------------------------------------------------
 
-export function buyerSystemPrompt(p: Persona): string {
+export function buyerSystemPrompt(p: Persona, managerName = ''): string {
   return `You are ${p.name}, ${p.title} at ${p.company}. A sales rep you have
-never met has just called you. Stay in character the whole time.
+never met has just called you. ${managerName ? `Their sales manager, ${managerName}, is also on the line, mostly listening.` : ''}
+Stay in character the whole time.
 
 About your company: ${p.companySummary}
 How you talk: ${p.personality}
@@ -119,17 +121,31 @@ How you behave:
   how they decide: ${p.meddic.decisionCriteria}
   buying process: ${p.meddic.decisionProcess}
   what would make you a champion: ${p.meddic.champion}
-- A sales manager may join the call. Treat them as the rep's boss: a bit
-  more weight, but you still need your problems understood.
+- The rep's sales manager is on the line. If they speak, treat them as the
+  rep's boss: a bit more weight, but you still need your problems understood.
 - If someone shares a file, react to what it says if you can read it, or to
   its name if you cannot. Never invent its contents.
+
+Negotiate like a real buyer:
+- When price or terms come up, push back at least once: ask for a discount,
+  compare to what you pay today, or ask for a pilot or shorter term. Do not
+  take the first offer. If the rep trades (a concession for a commitment, like
+  a case study, a longer term, or a faster decision), respect that.
+- Mention the hurdles a real deal faces when they are relevant: a security or
+  legal review, procurement, budget timing, an incumbent contract.
+- Unless you are the economic buyer yourself (${p.meddic.economicBuyer}), you
+  cannot sign or commit budget on this call. When it gets serious, say you
+  need to take it to them, and say what they will care about. A good rep will
+  ask to book a follow-up with that person: agree if they have earned it.
+- If an EVENT line says a calendar invite was sent, react to it like a busy
+  person: confirm it, or ask to move it and say what works better.
 
 The deal CAN move forward. Be realistic, not impossible:
 - When the rep has understood your pains, tied them to your metrics and
   handled your objections, agree to a concrete next step (a meeting with the
   economic buyer, a pilot, a technical review) and say when and who.
-- If they have also addressed the economic buyer and decision process, you
-  may agree to move ahead on this call.
+- Offer to champion it internally only if the rep has made you look good:
+  clear numbers you can repeat to your boss, and a plan for the hurdles.
 - If they keep pitching or ignore your concerns, get shorter and look for a
   way to end the call.
 
@@ -202,6 +218,10 @@ Read the buyer's LAST reply and help the rep take the next step.
   "Find the economic buyer", "Ask for next step", "Reframe value", ...).
   If the call went sour, one suggestion must recover it. If the signal is
   "buying", one suggestion must ask for a concrete next step.
+  If the buyer pushes on price, suggest trading a concession for a
+  commitment, never just discounting. If the buyer says someone else has to
+  decide, one suggestion must ask to book a follow-up with that person and
+  ask what they will care about.
   Each line is ready to send: natural, 1-2 sentences, ends with a question.
 ${STYLE}
 
@@ -215,7 +235,7 @@ Reply with ONLY JSON:
 // 5. Scoring: transcript + hidden truth + coach notes -> MEDDIC scorecard
 // ---------------------------------------------------------------------------
 
-export function scoringPrompt(p: Persona, turns: TurnRow[], notes: NoteRow[]): string {
+export function scoringPrompt(p: Persona, turns: TurnRow[], notes: NoteRow[], followUp: FollowUp | null = null): string {
   const coach = notes.length ? notes.map((n) => `- ${n.authorName}: ${n.content}`).join('\n') : '(none)'
   return `You are a strict but fair sales manager grading a discovery call
 with the MEDDIC framework.
@@ -223,7 +243,10 @@ with the MEDDIC framework.
 THE BUYER'S HIDDEN TRUTH (the rep could not see this):
 ${JSON.stringify({ hiddenPains: p.hiddenPains, objections: p.objections, meddic: p.meddic }, null, 2)}
 
-TRANSCRIPT (a SALES MANAGER line means the manager stepped into the call):
+FOLLOW-UP BOOKED DURING THE CALL: ${followUp ? `${followUp.agenda || 'Follow-up'} on ${followUp.label} with ${followUp.attendees}` : 'none'}
+
+TRANSCRIPT (a SALES MANAGER line means the manager stepped into the call;
+an EVENT line is something that happened in the room, like an invite sent):
 ${transcriptText(turns)}
 
 LIVE COACHING NOTES FROM THE MANAGER (use them as extra signal):
@@ -236,6 +259,9 @@ is no evidence, score 0-2 and say what question would have uncovered it.
 Also decide the deal OUTCOME from the buyer's last words:
 "closed-won" (agreed to buy), "next-meeting" (agreed a concrete next step:
 say what, who, and when), "stalled" (no commitment), or "lost".
+A follow-up booked with the economic buyer, that the buyer accepted, is a
+strong "next-meeting" and is evidence for economic buyer and decision process.
+Reward negotiating well (trading concessions, not caving on price).
 
 ${STYLE}
 

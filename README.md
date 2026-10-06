@@ -11,10 +11,11 @@ It is a practice room today. The same coach and manager tools are designed to si
 ## What happens in a call
 
 1. **Research.** Firecrawl scrapes the homepage, Exa finds web and news results, and Claude turns it into a buyer persona. The public half (name, title, pre-call brief) goes on the session. The hidden half (pains, objections, MEDDIC truth) goes into a collection no rep can read.
-2. **Open.** The rep speaks first. The coach offers three openers built from public research only.
+2. **Invite, then open.** Every call is a 3-seat room. The rep has to invite a manager, and the call stays locked until the manager accepts (`dojo-join-manager`, enforced on the server in `dojo-send-turn`). Then the rep speaks first, with three openers from the coach built from public research only.
 3. **Talk.** Each buyer reply streams into a shared record, so the rep and every manager watch it type out at the same time.
 4. **Coach.** After every reply, the coach writes an insight: buyer signal, deal temperature, MEDDIC coverage and three next moves. The manager can recommend one, which lights up on the rep's screen, or step in and talk to the buyer directly.
-5. **Close and review.** The buyer can be won: it agrees to a next meeting, a pilot or a purchase when the rep earns it. Scoring returns six MEDDIC scores with evidence, pains found and missed, turnarounds, and the deal outcome.
+5. **Negotiate.** The buyer pushes back on price, raises procurement and security hurdles, and, unless they are the economic buyer, cannot sign on the call. When they say "I need to take this to my CFO", the rep or manager clicks **Book follow-up** (`dojo-book-followup`): the meeting lands on the session and as an event line in the transcript, so the buyer, the coach and the scorer all see it.
+6. **Close and review.** The buyer can be won: it agrees to a next meeting, a pilot or a purchase when the rep earns it. Scoring returns six MEDDIC scores with evidence, pains found and missed, turnarounds, and the deal outcome.
 
 ## DeepSpace pieces used
 

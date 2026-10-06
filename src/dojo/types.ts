@@ -20,13 +20,25 @@ export interface SessionRow {
   score: string // JSON: Scorecard
   totalScore: number
   outcome: string // '' until scored, then DealOutcome['result']
+  managerId: string // '' until a manager accepts the invite
+  managerName: string
+  followUp: string // JSON: FollowUp, or ''
   error: string
+}
+
+/** A next meeting booked during the call, e.g. with the economic buyer. */
+export interface FollowUp {
+  when: string // ISO timestamp
+  label: string // human readable, in the booker's time zone
+  attendees: string
+  agenda: string
+  bookedBy: string
 }
 
 export interface TurnRow {
   sessionId: string
   seq: number
-  speaker: 'rep' | 'buyer' | 'manager'
+  speaker: 'rep' | 'buyer' | 'manager' | 'system'
   authorName: string
   content: string
   streaming: string // 'true' | 'false'
